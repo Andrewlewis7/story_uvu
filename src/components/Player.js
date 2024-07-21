@@ -45,6 +45,7 @@ const playerMachine = createMachine({
 const Player = () => {
   const [state, setState] = useState(playerMachine.initialState);
   const [context, setContext] = useState(playerMachine.context);
+  const [client, setClient] = useState(null);
 
   useEffect(() => {
     const actor = createActor(playerMachine).start();
@@ -56,38 +57,40 @@ const Player = () => {
       setContext(state.context);
     });
 
-    const client = mqtt.connect('ws://mqtt.uvucs.org', {
+    const mqttClient = mqtt.connect('ws://mqtt.uvucs.org:9001', {
       username: '9',
       password: 'dialectsfrickemptily'
     });
 
-    client.on('connect', () => {
+    mqttClient.on('connect', () => {
       console.log('Connected to broker');
-      client.subscribe('orchestrator/commands', (err) => {
+      mqttClient.subscribe('orchestrator/commands', (err) => {
         if (err) {
           console.error('Subscription error:', err);
         }
       });
     });
 
-    client.on('message', (topic, message) => {
+    mqttClient.on('message', (topic, message) => {
       const command = message.toString();
       console.log('Received command:', command);
       actor.send({ type: command });
     });
 
-    client.on('error', (err) => {
+    mqttClient.on('error', (err) => {
       console.error('Connection error:', err);
     });
 
-    client.on('close', () => {
+    mqttClient.on('close', () => {
       console.log('Connection closed');
     });
 
+    setClient(mqttClient);
+
     return () => {
       actor.stop();
-      if (client) {
-        client.end();
+      if (mqttClient) {
+        mqttClient.end();
       }
     };
   }, []);
@@ -101,11 +104,44 @@ const Player = () => {
     );
   }
 
+  const renderContent = () => {
+    switch (state.value) {
+      case 'stopped':
+        return <p>The player is stopped. Click play to start the track.</p>;
+      case 'playing':
+        return (
+          <div>
+            <p>Playing track {context.currentTrack} of {context.totalTracks}.</p>
+            {/* Example content elements */}
+            <audio controls autoPlay>
+              <source src={`path/to/audio/track${context.currentTrack}.mp3`} type="audio/mp3" />
+              Your browser does not support the audio element.
+            </audio>
+          </div>
+        );
+      case 'paused':
+        return <p>The player is paused. Click play to resume.</p>;
+      default:
+        return null;
+    }
+  };
+
   return (
     <div className="player-container">
       <h2>Player</h2>
       <p>Status: {state.value || 'unknown'}</p>
       <p>Current Track: {context.currentTrack !== undefined ? context.currentTrack : 'unknown'}</p>
+      <div>
+        {renderContent()}
+      </div>
+      <div>
+        {/* Add control buttons for testing */}
+        <button onClick={() => client.publish('orchestrator/commands', 'PLAY')}>Play</button>
+        <button onClick={() => client.publish('orchestrator/commands', 'PAUSE')}>Pause</button>
+        <button onClick={() => client.publish('orchestrator/commands', 'STOP')}>Stop</button>
+        <button onClick={() => client.publish('orchestrator/commands', 'NEXT_TRACK')}>Next Track</button>
+        <button onClick={() => client.publish('orchestrator/commands', 'PREV_TRACK')}>Previous Track</button>
+      </div>
     </div>
   );
 };

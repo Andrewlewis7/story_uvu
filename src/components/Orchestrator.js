@@ -2,43 +2,46 @@ import React, { useEffect, useState } from 'react';
 import mqtt from 'mqtt';
 import axios from 'axios';
 import FormData from 'form-data';
-import './Orchestrator.css';  // Import CSS file
+import './Orchestrator.css';
 
 const Orchestrator = () => {
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState(null);
+  const [client, setClient] = useState(null);
 
   useEffect(() => {
-    const client = mqtt.connect('mqtt://mqtt.uvucs.org', {
+    const mqttClient = mqtt.connect('ws://mqtt.uvucs.org:9001', {
       username: '9',
       password: 'dialectsfrickemptily'
     });
 
-    client.on('connect', () => {
+    mqttClient.on('connect', () => {
       console.log('Connected to broker');
     });
 
-    client.on('error', (err) => {
+    mqttClient.on('error', (err) => {
       console.error('Connection error:', err);
     });
 
-    client.on('close', () => {
+    mqttClient.on('close', () => {
       console.log('Connection closed');
     });
 
+    setClient(mqttClient);
+
     return () => {
-      if (client) {
-        client.end();
+      if (mqttClient) {
+        mqttClient.end();
       }
     };
   }, []);
 
   const sendCommand = (command) => {
-    const client = mqtt.connect('mqtt://mqtt.uvucs.org', {
-      username: '9',
-      password: 'dialectsfrickemptily'
-    });
-    client.publish('orchestrator/commands', command);
+    if (client) {
+      client.publish('orchestrator/commands', command);
+    } else {
+      console.error('MQTT client not connected');
+    }
   };
 
   const handleFileChange = (event) => {
@@ -50,7 +53,7 @@ const Orchestrator = () => {
     formData.append('file', file);
 
     try {
-      const response = await axios.post('http://localhost:3000/upload', formData, {
+      const response = await axios.post('http://data.uvucs.org/upload', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
