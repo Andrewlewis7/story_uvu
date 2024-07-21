@@ -1,0 +1,26 @@
+.orchestrator-container {
+    padding: 20px;
+    background-color: blue;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    margin: 20px;
+  }
+  
+  .orchestrator-container h2 {
+    color: #343a40;
+  }
+  
+  .orchestrator-container button {
+    margin-right: 10px;
+    padding: 10px 20px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  .orchestrator-container button:hover {
+    background-color: #0c4a8b;
+  }
+  
